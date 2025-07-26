@@ -167,7 +167,9 @@ public class MinimapCameraComponent : MonoBehaviour
         _minimapRenderTexture =
             new RenderTexture((int)MinimapSize.x, (int)MinimapSize.y, 16, RenderTextureFormat.ARGB32)
             {
-                name = "MinimapRT"
+                name = "MinimapRT",
+                antiAliasing = 4,
+                filterMode = FilterMode.Bilinear
             };
         _minimapRenderTexture.Create();
 
@@ -189,7 +191,7 @@ public class MinimapCameraComponent : MonoBehaviour
         _minimapCamera.targetTexture = _minimapRenderTexture;
         _minimapCamera.depth = -100;
         _minimapCamera.allowHDR = false;
-        _minimapCamera.allowMSAA = false;
+        _minimapCamera.allowMSAA = true;
 
         _minimapImage.texture = _minimapRenderTexture;
     }
