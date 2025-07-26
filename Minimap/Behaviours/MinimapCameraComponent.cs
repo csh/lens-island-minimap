@@ -174,7 +174,7 @@ public class MinimapCameraComponent : MonoBehaviour
 
     private void CreateMinimapCamera()
     {
-        var isOrthographic = MinimapPlugin.Instance.RenderingStyle.Value != MinimapRenderStyle.Orthographic;
+        var isOrthographic = MinimapPlugin.Instance.RenderingStyle.Value == MinimapRenderStyle.Orthographic;
         
         _minimapRenderTexture =
             new RenderTexture((int)MinimapSize.x, (int)MinimapSize.y, 16, RenderTextureFormat.ARGB32)
