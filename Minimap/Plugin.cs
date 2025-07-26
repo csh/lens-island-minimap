@@ -8,6 +8,12 @@ using Minimap.Patches;
 
 namespace Minimap;
 
+public enum MinimapRenderStyle
+{
+    Orthographic,
+    Perspective
+}
+
 [BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
 public class MinimapPlugin : BaseUnityPlugin
 {
@@ -15,7 +21,10 @@ public class MinimapPlugin : BaseUnityPlugin
     internal static MinimapPlugin Instance { get; private set; }
     internal new static ManualLogSource Logger;
 
+    internal ConfigEntry<MinimapRenderStyle> RenderingStyle;
     internal ConfigEntry<bool> RotateWithPlayer;
+    internal ConfigEntry<bool> ReplaceCompass;
+
     private Harmony _harmony;
 
     private void Awake()
@@ -28,9 +37,14 @@ public class MinimapPlugin : BaseUnityPlugin
 
         Logger.LogInfo($"Plugin {MyPluginInfo.PLUGIN_NAME} is loaded!");
 
+        ReplaceCompass = Config.Bind("Minimap", "Replace Compass", true,
+            "Should the minimap hide the vanilla compass and shift status effects to the left to fill the empty space?");
+        
         RotateWithPlayer = Config.Bind("Minimap", "Rotation Enabled", true,
             "Should the minimap rotate with the player camera or remain fixed?");
-        
+
+        RenderingStyle = Config.Bind("Minimap", "Rendering Style", MinimapRenderStyle.Perspective);
+
 #if DEBUG
         /*
          * Live reload helper for development using ScriptEngine.

@@ -10,11 +10,17 @@ public class MinimapCameraComponent : MonoBehaviour
 {
     private static readonly Vector2 MinimapSize = new(160f, 160f);
     private static readonly Vector2 OverlaySize = new(250f, 250f);
-    private static bool RotateWithPlayer => MinimapPlugin.Instance.RotateWithPlayer.Value;
+    private static readonly int DefaultMask = LayerMask.GetMask("Default", "Terrain", "Water", "Player", "Construct", "Decoration");
 
+    private const string OrthographicWaterShader = "Legacy Shaders/Diffuse";
+    private const string OrthographicShader = "Legacy Shaders/Diffuse";
+    private const int OrthographicWaterLayer = 6;
+    
     private const float MinCameraHeight = 30f;
     private const float MaxCameraHeight = 100f;
     private const float ZoomStep = 10f;
+
+    private static bool RotateWithPlayer => MinimapPlugin.Instance.RotateWithPlayer.Value;
 
     private float _cameraHeightTarget = 60f;
     private float _cameraHeight = 60f;
@@ -25,6 +31,7 @@ public class MinimapCameraComponent : MonoBehaviour
     private GameObject _overlayRoot;
     private RawImage _minimapImage;
     private Camera _minimapCamera;
+    private GameObject _waterPlane;
 
     private void Start()
     {
@@ -47,7 +54,7 @@ public class MinimapCameraComponent : MonoBehaviour
     private void CreateMinimapUI()
     {
         // TODO: Add support for toggling replacement of the vanilla compass
-        
+
         var compass = FindObjectOfType<CompassSpinner>(true);
         if (!compass)
         {
@@ -55,16 +62,19 @@ public class MinimapCameraComponent : MonoBehaviour
             return;
         }
 
-        var statusEffects = FindObjectOfType<StatusEffectSlots>();
-        if (statusEffects)
+        if (MinimapPlugin.Instance.ReplaceCompass.Value)
         {
-            statusEffects.transform.localPosition = statusEffects.transform.localPosition with
+            var statusEffects = FindObjectOfType<StatusEffectSlots>();
+            if (statusEffects)
             {
-                x = 20f
-            };
-        }
+                statusEffects.transform.localPosition = statusEffects.transform.localPosition with
+                {
+                    x = 20f
+                };
+            }
 
-        compass.gameObject.SetActive(false);
+            compass.gameObject.SetActive(false);
+        }
 
         _minimapContainer = new GameObject("MinimapContainer");
         _minimapContainer.transform.SetParent(compass.transform.parent, false);
@@ -145,7 +155,7 @@ public class MinimapCameraComponent : MonoBehaviour
     private void HandleZoomInput()
     {
         if (PauseMenu.Instance && PauseMenu.Instance.IsVisible) return;
-        
+
         // TODO: Make keybinds configurable
         if (Input.GetKeyDown(KeyCode.Alpha9))
         {
@@ -154,7 +164,7 @@ public class MinimapCameraComponent : MonoBehaviour
         else if (Input.GetKeyDown(KeyCode.Alpha0))
         {
             _cameraHeightTarget = Mathf.Max(_cameraHeightTarget - ZoomStep, MinCameraHeight);
-        } 
+        }
     }
 
     private void SmoothZoom()
@@ -164,36 +174,78 @@ public class MinimapCameraComponent : MonoBehaviour
 
     private void CreateMinimapCamera()
     {
+        var isOrthographic = MinimapPlugin.Instance.RenderingStyle.Value != MinimapRenderStyle.Orthographic;
+        
         _minimapRenderTexture =
             new RenderTexture((int)MinimapSize.x, (int)MinimapSize.y, 16, RenderTextureFormat.ARGB32)
             {
                 name = "MinimapRT",
-                antiAliasing = 4,
-                filterMode = FilterMode.Bilinear
+                filterMode = FilterMode.Bilinear,
+                antiAliasing = isOrthographic ? 1 : 4
             };
         _minimapRenderTexture.Create();
 
         var camObj = new GameObject("MinimapCamera");
         camObj.transform.SetParent(transform, false);
         _minimapCamera = camObj.AddComponent<Camera>();
-
-        /*
-         * Orthographic conflicts with the water shader.
-         *
-         * Probably possible to patch it, but that's beyond my current understanding.
-         */
+        
+        _minimapCamera.orthographic = isOrthographic;
         _minimapCamera.clearFlags = CameraClearFlags.SolidColor;
         _minimapCamera.backgroundColor = Color.clear;
         _minimapCamera.nearClipPlane = 1f;
         _minimapCamera.farClipPlane = 600f;
         _minimapCamera.fieldOfView = 45f;
-        _minimapCamera.cullingMask = LayerMask.GetMask("Default", "Terrain", "Water", "Player");
+        _minimapCamera.cullingMask = DefaultMask;
         _minimapCamera.targetTexture = _minimapRenderTexture;
         _minimapCamera.depth = -100;
         _minimapCamera.allowHDR = false;
-        _minimapCamera.allowMSAA = true;
+
+        if (_minimapCamera.orthographic)
+        {
+            _minimapCamera.orthographicSize = _cameraHeight * 0.5f;
+            _minimapCamera.cullingMask |= 1 << OrthographicWaterLayer;
+            var orthographicShader = Shader.Find(OrthographicShader);
+            if (orthographicShader)
+            {
+                _minimapCamera.SetReplacementShader(orthographicShader, "RenderType");
+            }
+            else
+            {
+                MinimapPlugin.Logger.LogWarning($"Could not find \"{OrthographicShader}\" shader");
+            }
+
+            CreateMinimapWaterPlane();
+        }
+        else
+        {
+            _minimapCamera.allowMSAA = true;
+        }
 
         _minimapImage.texture = _minimapRenderTexture;
+    }
+
+    private void CreateMinimapWaterPlane()
+    {
+        _waterPlane = GameObject.CreatePrimitive(PrimitiveType.Plane);
+        _waterPlane.name = "MinimapWater";
+
+        var currentCameraPos = _minimapCamera.transform.position;
+        _waterPlane.transform.position = new Vector3(currentCameraPos.x, 3.55f, currentCameraPos.z);
+        _waterPlane.transform.localScale = new Vector3(200f, 1f, 200f);
+        _waterPlane.layer = OrthographicWaterLayer;
+
+        // ReSharper disable once UseObjectOrCollectionInitializer
+        var waterMaterial = new Material(Shader.Find(OrthographicWaterShader));
+        waterMaterial.color = new Color(0.2f, 0.5f, 0.8f, 0.8f);
+        waterMaterial.renderQueue = 1000;
+
+        var renderer = _waterPlane.GetComponent<Renderer>();
+        renderer.material = waterMaterial;
+        renderer.enabled = true;
+        renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        renderer.receiveShadows = false;
+
+        Destroy(_waterPlane.GetComponent<Collider>());
     }
 
     private void Update()
@@ -204,6 +256,11 @@ public class MinimapCameraComponent : MonoBehaviour
         SmoothZoom();
 
         var playerPos2D = Player.PlayerPos2D;
+        if (_minimapCamera.orthographic)
+        {
+            _minimapCamera.orthographicSize = _cameraHeight * 0.5f;
+        }
+
         _minimapCamera.transform.position = new Vector3(playerPos2D.x, _cameraHeight, playerPos2D.y);
         _minimapCamera.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
 
@@ -248,19 +305,23 @@ public class MinimapCameraComponent : MonoBehaviour
 
     private void OnDestroy()
     {
-        var compass = FindObjectOfType<CompassSpinner>();
-        if (compass)
+        if (MinimapPlugin.Instance.ReplaceCompass.Value)
         {
-            compass.gameObject.SetActive(true);
-        }
+            var compass = FindObjectOfType<CompassSpinner>();
 
-        var statusEffects = FindObjectOfType<StatusEffectSlots>();
-        if (statusEffects)
-        {
-            statusEffects.transform.localPosition = statusEffects.transform.localPosition with
+            if (compass)
             {
-                x = 100f
-            };
+                compass.gameObject.SetActive(true);
+            }
+
+            var statusEffects = FindObjectOfType<StatusEffectSlots>();
+            if (statusEffects)
+            {
+                statusEffects.transform.localPosition = statusEffects.transform.localPosition with
+                {
+                    x = 100f
+                };
+            }
         }
 
         if (_minimapRenderTexture != null)
@@ -276,7 +337,12 @@ public class MinimapCameraComponent : MonoBehaviour
 
         if (_minimapContainer != null)
         {
-            Destroy(_minimapContainer); // Destroy container (which destroys overlay and minimap too)
+            Destroy(_minimapContainer);
+        }
+
+        if (_waterPlane != null)
+        {
+            Destroy(_waterPlane);
         }
     }
 }
