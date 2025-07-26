@@ -1,13 +1,10 @@
-﻿using System;
-using BepInEx;
+﻿using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using FlowStudio.Map;
 using HarmonyLib;
 using Minimap.Behaviours;
 using Minimap.Patches;
-using UnityEngine;
-using UnityEngine.SceneManagement;
 
 namespace Minimap;
 
