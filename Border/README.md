@@ -1,0 +1,1 @@
+﻿Simple 200x200 [Krita](https://krita.org) template for creating an overlay to decorate the minimap.
