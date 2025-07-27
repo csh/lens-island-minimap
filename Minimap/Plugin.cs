@@ -59,6 +59,7 @@ public class MinimapPlugin : BaseUnityPlugin
 
     private void OnDestroy()
     {
+        _harmony?.UnpatchSelf();
         DestroyMinimapComponents();
     }
 
