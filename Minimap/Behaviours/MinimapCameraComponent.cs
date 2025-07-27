@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System.Collections;
+using System.IO;
 using Flow.StatusEffects;
 using UnityEngine;
 using UnityEngine.UI;
@@ -24,6 +25,7 @@ public class MinimapCameraComponent : MonoBehaviour
 
     private float _cameraHeightTarget = 60f;
     private float _cameraHeight = 60f;
+    private bool _wasCompassReplaced;
 
     private RenderTexture _minimapRenderTexture;
     private GameObject _minimapContainer;
@@ -53,8 +55,6 @@ public class MinimapCameraComponent : MonoBehaviour
 
     private void CreateMinimapUI()
     {
-        // TODO: Add support for toggling replacement of the vanilla compass
-
         var compass = FindObjectOfType<CompassSpinner>(true);
         if (!compass)
         {
@@ -64,16 +64,7 @@ public class MinimapCameraComponent : MonoBehaviour
 
         if (MinimapPlugin.Instance.ReplaceCompass.Value)
         {
-            var statusEffects = FindObjectOfType<StatusEffectSlots>();
-            if (statusEffects)
-            {
-                statusEffects.transform.localPosition = statusEffects.transform.localPosition with
-                {
-                    x = 20f
-                };
-            }
-
-            compass.gameObject.SetActive(false);
+            StartCoroutine(ReplaceCompass());
         }
 
         _minimapContainer = new GameObject("MinimapContainer");
@@ -129,6 +120,29 @@ public class MinimapCameraComponent : MonoBehaviour
         overlayImageRect.anchorMax = new Vector2(0.5f, 0.5f);
         overlayImageRect.pivot = new Vector2(0.5f, 0.5f);
         overlayImageRect.anchoredPosition = Vector2.zero;
+    }
+
+    private IEnumerator ReplaceCompass()
+    {
+        StatusEffectSlots statusEffects = null;
+        while (statusEffects is null)
+        {
+            statusEffects = FindObjectOfType<StatusEffectSlots>();
+            yield return new WaitForSecondsRealtime(0.2f);
+        }
+        
+        var compass = FindObjectOfType<CompassSpinner>();
+        if (compass)
+        {
+            compass.gameObject.SetActive(false);
+        }
+        
+        statusEffects.transform.localPosition = statusEffects.transform.localPosition with
+        {
+            x = 20f
+        };
+
+        _wasCompassReplaced = true;
     }
 
     private static Sprite LoadSpriteFromFile(string filePath)
@@ -305,7 +319,7 @@ public class MinimapCameraComponent : MonoBehaviour
 
     private void OnDestroy()
     {
-        if (MinimapPlugin.Instance.ReplaceCompass.Value)
+        if (_wasCompassReplaced)
         {
             var compass = FindObjectOfType<CompassSpinner>();
 
