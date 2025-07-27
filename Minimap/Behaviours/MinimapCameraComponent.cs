@@ -256,13 +256,13 @@ public class MinimapCameraComponent : MonoBehaviour
         _waterPlane.name = "MinimapWater";
 
         var currentCameraPos = _minimapCamera.transform.position;
-        _waterPlane.transform.position = new Vector3(currentCameraPos.x, 3.55f, currentCameraPos.z);
+        _waterPlane.transform.position = new Vector3(currentCameraPos.x, 3.82f, currentCameraPos.z);
         _waterPlane.transform.localScale = new Vector3(200f, 1f, 200f);
         _waterPlane.layer = OrthographicWaterLayer;
 
         // ReSharper disable once UseObjectOrCollectionInitializer
         var waterMaterial = new Material(Shader.Find(OrthographicWaterShader));
-        waterMaterial.color = new Color(0.2f, 0.5f, 0.8f, 0.8f);
+        waterMaterial.color = new Color(0.2f, 0.55f, 0.92f, 1f);
         waterMaterial.renderQueue = 1000;
 
         var renderer = _waterPlane.GetComponent<Renderer>();
