@@ -24,6 +24,7 @@ public class MinimapPlugin : BaseUnityPlugin
     internal ConfigEntry<MinimapRenderStyle> RenderingStyle;
     internal ConfigEntry<bool> RotateWithPlayer;
     internal ConfigEntry<bool> ReplaceCompass;
+    internal ConfigEntry<bool> Flatten;
 
     private Harmony _harmony;
 
@@ -44,6 +45,11 @@ public class MinimapPlugin : BaseUnityPlugin
             "Should the minimap rotate with the player camera or remain fixed?");
 
         RenderingStyle = Config.Bind("Minimap", "Rendering Style", MinimapRenderStyle.Perspective);
+
+        Flatten = Config.Bind("Orthographic", "Flatten", false,
+            "Would you like to apply a shader that makes the art style of the map appear more flat?\n" +
+            "Helps with making water look slightly less bad in orthographic mode."
+        );
 
 #if DEBUG
         /*

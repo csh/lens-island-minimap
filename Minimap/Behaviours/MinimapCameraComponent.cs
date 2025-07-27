@@ -11,7 +11,15 @@ public class MinimapCameraComponent : MonoBehaviour
 {
     private static readonly Vector2 MinimapSize = new(160f, 160f);
     private static readonly Vector2 OverlaySize = new(250f, 250f);
-    private static readonly int DefaultMask = LayerMask.GetMask("Default", "Terrain", "Water", "Player", "Construct", "Decoration");
+    private static readonly int DefaultMask = LayerMask.GetMask(
+        "Default", 
+        "Terrain", 
+        "Water", 
+        "Player", 
+        "InteractIgnore", 
+        "Construct",
+        "Decoration"
+    );
 
     private const string OrthographicWaterShader = "Legacy Shaders/Diffuse";
     private const string OrthographicShader = "Legacy Shaders/Diffuse";
@@ -216,16 +224,20 @@ public class MinimapCameraComponent : MonoBehaviour
 
         if (_minimapCamera.orthographic)
         {
-            _minimapCamera.orthographicSize = _cameraHeight * 0.5f;
+            _minimapCamera.orthographicSize = _cameraHeight * 0.25f;
             _minimapCamera.cullingMask |= 1 << OrthographicWaterLayer;
-            var orthographicShader = Shader.Find(OrthographicShader);
-            if (orthographicShader)
+
+            if (MinimapPlugin.Instance.Flatten.Value)
             {
-                _minimapCamera.SetReplacementShader(orthographicShader, "RenderType");
-            }
-            else
-            {
-                MinimapPlugin.Logger.LogWarning($"Could not find \"{OrthographicShader}\" shader");
+                var orthographicShader = Shader.Find(OrthographicShader);
+                if (orthographicShader)
+                {
+                    _minimapCamera.SetReplacementShader(orthographicShader, "RenderType");
+                }
+                else
+                {
+                    MinimapPlugin.Logger.LogWarning($"Could not find \"{OrthographicShader}\" shader");
+                }
             }
 
             CreateMinimapWaterPlane();
@@ -272,7 +284,7 @@ public class MinimapCameraComponent : MonoBehaviour
         var playerPos2D = Player.PlayerPos2D;
         if (_minimapCamera.orthographic)
         {
-            _minimapCamera.orthographicSize = _cameraHeight * 0.5f;
+            _minimapCamera.orthographicSize = _cameraHeight * 0.25f;
         }
 
         _minimapCamera.transform.position = new Vector3(playerPos2D.x, _cameraHeight, playerPos2D.y);
