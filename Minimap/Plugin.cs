@@ -9,12 +9,6 @@ using Minimap.Patches;
 
 namespace Minimap;
 
-public enum MinimapRenderStyle
-{
-    Orthographic,
-    Perspective
-}
-
 [BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
 public class MinimapPlugin : BaseUnityPlugin
 {
@@ -42,7 +36,7 @@ public class MinimapPlugin : BaseUnityPlugin
 
         ReplaceCompass = Config.Bind("Minimap", "Replace Compass", true,
             "Should the minimap hide the vanilla compass and shift status effects to the left to fill the empty space?");
-        
+
         RotateWithPlayer = Config.Bind("Minimap", "Rotation Enabled", true,
             "Should the minimap rotate with the player camera or remain fixed?");
 
@@ -50,7 +44,7 @@ public class MinimapPlugin : BaseUnityPlugin
             new ConfigDescription("How many units above the player should the minimap camera be?",
                 new AcceptableValueRange<float>(MinimapCameraComponent.MinCameraHeight,
                     MinimapCameraComponent.MaxCameraHeight)));
-        
+
         RenderingStyle = Config.Bind("Minimap", "Rendering Style", MinimapRenderStyle.Perspective);
 
         Flatten = Config.Bind("Orthographic", "Flatten", false,
@@ -60,7 +54,7 @@ public class MinimapPlugin : BaseUnityPlugin
 
         RenderingStyle.SettingChanged += OnRenderingStyleChanged;
         Flatten.SettingChanged += OnFlattenChanged;
-        
+
 #if DEBUG
         /*
          * Live reload helper for development using ScriptEngine.
@@ -78,7 +72,8 @@ public class MinimapPlugin : BaseUnityPlugin
         var minimap = MinimapCameraComponent.Instance;
         if (!minimap)
         {
-            Logger.LogWarning("Failed to find Minimap component; if you're not in game yet you can safely ignore this message.");
+            Logger.LogWarning(
+                "Failed to find Minimap component; if you're not in game yet you can safely ignore this message.");
             return;
         }
 
@@ -99,7 +94,8 @@ public class MinimapPlugin : BaseUnityPlugin
         var minimap = MinimapCameraComponent.Instance;
         if (!minimap)
         {
-            Logger.LogWarning("Failed to find Minimap component; if you're not in game yet you can safely ignore this message.");
+            Logger.LogWarning(
+                "Failed to find Minimap component; if you're not in game yet you can safely ignore this message.");
             return;
         }
 
@@ -117,7 +113,7 @@ public class MinimapPlugin : BaseUnityPlugin
     {
         RenderingStyle.SettingChanged -= OnRenderingStyleChanged;
         Flatten.SettingChanged -= OnFlattenChanged;
-        
+
         _harmony?.UnpatchSelf();
         DestroyMinimapComponents();
     }

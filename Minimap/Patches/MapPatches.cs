@@ -18,7 +18,7 @@ public static class MapPatches
     internal static void InjectMinimap(MapUIManager mapManager)
     {
         if (!mapManager || mapManager.gameObject.TryGetComponent<MinimapCameraComponent>(out _)) return;
-        
+
         mapManager.gameObject.AddComponent<MinimapCameraComponent>();
         MinimapPlugin.Logger.LogInfo("Minimap injected successfully!");
     }

@@ -10,15 +10,16 @@ namespace Minimap.Behaviours;
 public class MinimapCameraComponent : MonoBehaviour
 {
     public static MinimapCameraComponent Instance { get; private set; }
-    
+
     private static readonly Vector2 MinimapSize = new(160f, 160f);
     private static readonly Vector2 OverlaySize = new(250f, 250f);
+
     private static readonly int DefaultMask = LayerMask.GetMask(
-        "Default", 
-        "Terrain", 
-        "Water", 
-        "Player", 
-        "InteractIgnore", 
+        "Default",
+        "Terrain",
+        "Water",
+        "Player",
+        "InteractIgnore",
         "Construct",
         "Decoration"
     );
@@ -28,7 +29,7 @@ public class MinimapCameraComponent : MonoBehaviour
     private const string OrthographicWaterShader = "Legacy Shaders/Diffuse";
     private const string OrthographicShader = "Legacy Shaders/Diffuse";
     private const int OrthographicWaterLayer = 6;
-    
+
     internal const float MinCameraHeight = 30f;
     internal const float MaxCameraHeight = 100f;
     private const float ZoomStep = 10f;
@@ -70,34 +71,36 @@ public class MinimapCameraComponent : MonoBehaviour
         if (Instance)
         {
             MinimapPlugin.Logger.LogWarning("Multiple Minimap instances detected, something has likely gone wrong.");
-            MinimapPlugin.Logger.LogWarning("Existing instances will be disposed of; if you have enabled compass replacement your UI may adjust briefly.");
+            MinimapPlugin.Logger.LogWarning(
+                "Existing instances will be disposed of; if you have enabled compass replacement your UI may adjust briefly.");
             Destroy(Instance);
         }
-        
+
         Instance = this;
     }
 
     private Material _brightnessMaterial;
-    
+
     private void InitializeBrightnessControl()
     {
         var brightnessShader = Shader.Find("UI/Default");
         if (!brightnessShader)
         {
-            MinimapPlugin.Logger.LogError("Could not find shader for brightness control, minimap brightness will be static");
+            MinimapPlugin.Logger.LogError(
+                "Could not find shader for brightness control, minimap brightness will be static");
             return;
         }
-        
+
         // TODO: Figure out if possible to smoothly transition brightness.
         _brightnessMaterial = new Material(brightnessShader)
         {
             color = new Color(1.25f, 1.25f, 1.25f, 1.0f)
         };
-        
+
         TOD_Time.OnSunrise += OnSunrise;
         TOD_Time.OnSunset += OnSunset;
-        
-        var sky =  FindObjectOfType<TOD_Sky>();
+
+        var sky = FindObjectOfType<TOD_Sky>();
         if (sky && sky.IsNight)
         {
             OnSunset();
@@ -197,13 +200,13 @@ public class MinimapCameraComponent : MonoBehaviour
             statusEffects = FindObjectOfType<StatusEffectSlots>();
             yield return new WaitForSecondsRealtime(0.2f);
         }
-        
+
         var compass = FindObjectOfType<CompassSpinner>();
         if (compass)
         {
             compass.gameObject.SetActive(false);
         }
-        
+
         statusEffects.transform.localPosition = statusEffects.transform.localPosition with
         {
             x = 20f
@@ -246,7 +249,7 @@ public class MinimapCameraComponent : MonoBehaviour
         {
             _cameraHeightTarget = Mathf.Max(_cameraHeightTarget - ZoomStep, MinCameraHeight);
         }
-        
+
         StartCoroutine(PushTargetHeightToConfig());
     }
 
@@ -264,7 +267,7 @@ public class MinimapCameraComponent : MonoBehaviour
     private void CreateMinimapCamera()
     {
         var isOrthographic = MinimapPlugin.Instance.RenderingStyle.Value == MinimapRenderStyle.Orthographic;
-        
+
         _minimapRenderTexture =
             new RenderTexture((int)MinimapSize.x, (int)MinimapSize.y, 16, RenderTextureFormat.ARGB32)
             {
@@ -277,7 +280,7 @@ public class MinimapCameraComponent : MonoBehaviour
         var camObj = new GameObject("MinimapCamera");
         camObj.transform.SetParent(transform, false);
         _minimapCamera = camObj.AddComponent<Camera>();
-        
+
         _minimapCamera.orthographic = isOrthographic;
         _minimapCamera.clearFlags = CameraClearFlags.SolidColor;
         _minimapCamera.backgroundColor = Color.clear;
@@ -338,7 +341,7 @@ public class MinimapCameraComponent : MonoBehaviour
             RemoveFlattenShader();
         }
 
-        _minimapCamera.cullingMask |= 1 << OrthographicWaterLayer; 
+        _minimapCamera.cullingMask |= 1 << OrthographicWaterLayer;
 
         if (!_waterPlane)
         {
@@ -352,7 +355,7 @@ public class MinimapCameraComponent : MonoBehaviour
 
         _minimapCamera.orthographic = false;
         _minimapCamera.cullingMask = DefaultMask;
-        
+
         RemoveFlattenShader();
 
         if (!_waterPlane) return;
@@ -442,7 +445,7 @@ public class MinimapCameraComponent : MonoBehaviour
     private void OnDestroy()
     {
         Instance = null;
-        
+
         if (_wasCompassReplaced)
         {
             var compass = FindObjectOfType<CompassSpinner>();
