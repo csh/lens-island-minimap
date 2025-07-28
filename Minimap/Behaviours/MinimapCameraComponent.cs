@@ -9,6 +9,8 @@ namespace Minimap.Behaviours;
 [DisallowMultipleComponent]
 public class MinimapCameraComponent : MonoBehaviour
 {
+    public static MinimapCameraComponent Instance { get; private set; }
+    
     private static readonly Vector2 MinimapSize = new(160f, 160f);
     private static readonly Vector2 OverlaySize = new(250f, 250f);
     private static readonly int DefaultMask = LayerMask.GetMask(
@@ -20,6 +22,8 @@ public class MinimapCameraComponent : MonoBehaviour
         "Construct",
         "Decoration"
     );
+
+    private static readonly float OrthographicSizeFactor = 0.25f;
 
     private const string OrthographicWaterShader = "Legacy Shaders/Diffuse";
     private const string OrthographicShader = "Legacy Shaders/Diffuse";
@@ -59,6 +63,15 @@ public class MinimapCameraComponent : MonoBehaviour
 
         CreateMinimapUI();
         CreateMinimapCamera();
+
+        if (Instance)
+        {
+            MinimapPlugin.Logger.LogWarning("Multiple Minimap instances detected, something has likely gone wrong.");
+            MinimapPlugin.Logger.LogWarning("Existing instances will be disposed of; if you have enabled compass replacement your UI may adjust briefly.");
+            Destroy(Instance);
+        }
+        
+        Instance = this;
     }
 
     private void CreateMinimapUI()
@@ -224,30 +237,74 @@ public class MinimapCameraComponent : MonoBehaviour
 
         if (_minimapCamera.orthographic)
         {
-            _minimapCamera.orthographicSize = _cameraHeight * 0.25f;
-            _minimapCamera.cullingMask |= 1 << OrthographicWaterLayer;
-
-            if (MinimapPlugin.Instance.Flatten.Value)
-            {
-                var orthographicShader = Shader.Find(OrthographicShader);
-                if (orthographicShader)
-                {
-                    _minimapCamera.SetReplacementShader(orthographicShader, "RenderType");
-                }
-                else
-                {
-                    MinimapPlugin.Logger.LogWarning($"Could not find \"{OrthographicShader}\" shader");
-                }
-            }
-
-            CreateMinimapWaterPlane();
+            SwitchToOrthographic();
         }
         else
         {
-            _minimapCamera.allowMSAA = true;
+            SwitchToPerspective();
         }
 
         _minimapImage.texture = _minimapRenderTexture;
+    }
+
+    public void ApplyFlattenShader()
+    {
+        if (!_minimapCamera) return;
+        var orthographicShader = Shader.Find(OrthographicShader);
+        if (orthographicShader)
+        {
+            _minimapCamera.SetReplacementShader(orthographicShader, "RenderType");
+        }
+        else
+        {
+            MinimapPlugin.Logger.LogWarning($"Could not find \"{OrthographicShader}\" shader");
+        }
+    }
+
+    public void RemoveFlattenShader()
+    {
+        if (!_minimapCamera) return;
+        _minimapCamera.ResetReplacementShader();
+    }
+
+    public void SwitchToOrthographic()
+    {
+        if (!_minimapCamera) return;
+
+        _minimapCamera.orthographic = true;
+        _minimapCamera.orthographicSize = _cameraHeight * OrthographicSizeFactor;
+
+        if (MinimapPlugin.Instance.Flatten.Value)
+        {
+            ApplyFlattenShader();
+        }
+        else
+        {
+            _minimapCamera.ResetReplacementShader();
+        }
+
+        _minimapCamera.allowMSAA = false;
+        _minimapCamera.cullingMask |= 1 << OrthographicWaterLayer; 
+
+        if (!_waterPlane)
+        {
+            CreateMinimapWaterPlane();
+        }
+    }
+
+    public void SwitchToPerspective()
+    {
+        if (!_minimapCamera) return;
+
+        _minimapCamera.orthographic = false;
+        _minimapCamera.allowMSAA = true;
+        _minimapCamera.cullingMask = DefaultMask;
+        
+        _minimapCamera.ResetReplacementShader();
+
+        if (!_waterPlane) return;
+        Destroy(_waterPlane);
+        _waterPlane = null;
     }
 
     private void CreateMinimapWaterPlane()
@@ -284,7 +341,7 @@ public class MinimapCameraComponent : MonoBehaviour
         var playerPos2D = Player.PlayerPos2D;
         if (_minimapCamera.orthographic)
         {
-            _minimapCamera.orthographicSize = _cameraHeight * 0.25f;
+            _minimapCamera.orthographicSize = _cameraHeight * OrthographicSizeFactor;
         }
 
         _minimapCamera.transform.position = new Vector3(playerPos2D.x, _cameraHeight, playerPos2D.y);
@@ -331,6 +388,8 @@ public class MinimapCameraComponent : MonoBehaviour
 
     private void OnDestroy()
     {
+        Instance = null;
+        
         if (_wasCompassReplaced)
         {
             var compass = FindObjectOfType<CompassSpinner>();
@@ -350,23 +409,23 @@ public class MinimapCameraComponent : MonoBehaviour
             }
         }
 
-        if (_minimapRenderTexture != null)
+        if (_minimapRenderTexture)
         {
             _minimapRenderTexture.Release();
             Destroy(_minimapRenderTexture);
         }
 
-        if (_minimapCamera != null)
+        if (_minimapCamera)
         {
             Destroy(_minimapCamera.gameObject);
         }
 
-        if (_minimapContainer != null)
+        if (_minimapContainer)
         {
             Destroy(_minimapContainer);
         }
 
-        if (_waterPlane != null)
+        if (_waterPlane)
         {
             Destroy(_waterPlane);
         }

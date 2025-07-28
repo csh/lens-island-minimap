@@ -1,4 +1,5 @@
-﻿using BepInEx;
+﻿using System;
+using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using FlowStudio.Map;
@@ -51,6 +52,9 @@ public class MinimapPlugin : BaseUnityPlugin
             "Helps with making water look slightly less bad in orthographic mode."
         );
 
+        RenderingStyle.SettingChanged += OnRenderingStyleChanged;
+        Flatten.SettingChanged += OnFlattenChanged;
+        
 #if DEBUG
         /*
          * Live reload helper for development using ScriptEngine.
@@ -63,15 +67,59 @@ public class MinimapPlugin : BaseUnityPlugin
 #endif
     }
 
+    private void OnFlattenChanged(object sender, EventArgs e)
+    {
+        var minimap = MinimapCameraComponent.Instance;
+        if (!minimap)
+        {
+            Logger.LogWarning("Failed to find Minimap component; if you're not in game yet you can safely ignore this message.");
+            return;
+        }
+
+        if (Flatten.Value)
+        {
+            minimap.ApplyFlattenShader();
+        }
+        else
+        {
+            minimap.RemoveFlattenShader();
+        }
+    }
+
+    private void OnRenderingStyleChanged(object sender, EventArgs e)
+    {
+        var minimap = MinimapCameraComponent.Instance;
+        if (!minimap)
+        {
+            Logger.LogWarning("Failed to find Minimap component; if you're not in game yet you can safely ignore this message.");
+            return;
+        }
+
+        if (RenderingStyle.Value == MinimapRenderStyle.Perspective)
+        {
+            minimap.SwitchToPerspective();
+        }
+        else
+        {
+            minimap.SwitchToOrthographic();
+        }
+    }
+
     private void OnDestroy()
     {
+        RenderingStyle.SettingChanged -= OnRenderingStyleChanged;
+        Flatten.SettingChanged -= OnFlattenChanged;
+        
         _harmony?.UnpatchSelf();
         DestroyMinimapComponents();
     }
 
     private static void DestroyMinimapComponents()
     {
-        Logger.LogInfo("Destroying minimap components...");
+        /*
+         * Even though we use a singleton, let's clean up thoroughly to be safe.
+         */
+        Logger.LogInfo("Destroying minimap components.");
         foreach (var minimapComponent in FindObjectsOfType<MinimapCameraComponent>(true))
         {
             Destroy(minimapComponent);
