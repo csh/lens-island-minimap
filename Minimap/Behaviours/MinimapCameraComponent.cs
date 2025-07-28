@@ -89,7 +89,7 @@ public class MinimapCameraComponent : MonoBehaviour
         var brightnessShader = Shader.Find("UI/Default");
         if (!brightnessShader)
         {
-            MinimapPlugin.Logger.LogError("Could not find UI/Default shader for brightness control");
+            MinimapPlugin.Logger.LogError("Could not find shader for brightness control, minimap brightness will be static");
             return;
         }
         
