@@ -63,6 +63,7 @@ public class MinimapCameraComponent : MonoBehaviour
 
         CreateMinimapUI();
         CreateMinimapCamera();
+        InitializeBrightnessControl();
 
         if (Instance)
         {
@@ -72,6 +73,46 @@ public class MinimapCameraComponent : MonoBehaviour
         }
         
         Instance = this;
+    }
+
+    private Material _brightnessMaterial;
+    private TOD_Sky _todSky;
+    
+    private void InitializeBrightnessControl()
+    {
+        _todSky = FindObjectOfType<TOD_Sky>();
+        if (!_todSky)
+        {
+            MinimapPlugin.Logger.LogWarning("Could not find Sky controller, minimap brightness will be static");
+        } 
+        
+        var brightnessShader = Shader.Find("UI/Default");
+        if (!brightnessShader)
+        {
+            MinimapPlugin.Logger.LogError("Could not find UI/Default shader for brightness control");
+            return;
+        }
+        
+        _brightnessMaterial = new Material(brightnessShader);
+        _minimapImage.material = _brightnessMaterial;
+
+        if (!_todSky) return;
+        
+        TOD_Time.OnHour += UpdateMinimapBrightness;
+        UpdateMinimapBrightness();
+    }
+
+    private void UpdateMinimapBrightness()
+    {
+        if (!_todSky || !_brightnessMaterial) return;
+        
+        var brightness = 1.0f;
+        if (_todSky && _todSky.IsNight)
+        {
+            brightness = 1.15f;
+        }
+        
+        _brightnessMaterial.color = new Color(brightness, brightness, brightness, 1f);
     }
 
     private void CreateMinimapUI()
@@ -406,6 +447,17 @@ public class MinimapCameraComponent : MonoBehaviour
                     x = 100f
                 };
             }
+        }
+
+        if (_todSky)
+        {
+            TOD_Time.OnHour -= UpdateMinimapBrightness;
+            _todSky = null;
+        }
+
+        if (_brightnessMaterial)
+        {
+            Destroy(_brightnessMaterial);
         }
 
         if (_minimapRenderTexture)
