@@ -76,6 +76,8 @@ public class MinimapPlugin : BaseUnityPlugin
             return;
         }
 
+        if (RenderingStyle.Value != MinimapRenderStyle.Orthographic) return;
+
         if (Flatten.Value)
         {
             minimap.ApplyFlattenShader();

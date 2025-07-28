@@ -216,7 +216,7 @@ public class MinimapCameraComponent : MonoBehaviour
             {
                 name = "MinimapRT",
                 filterMode = FilterMode.Bilinear,
-                antiAliasing = isOrthographic ? 1 : 4
+                antiAliasing = 2
             };
         _minimapRenderTexture.Create();
 
@@ -234,6 +234,7 @@ public class MinimapCameraComponent : MonoBehaviour
         _minimapCamera.targetTexture = _minimapRenderTexture;
         _minimapCamera.depth = -100;
         _minimapCamera.allowHDR = false;
+        _minimapCamera.allowMSAA = true;
 
         if (_minimapCamera.orthographic)
         {
@@ -280,10 +281,9 @@ public class MinimapCameraComponent : MonoBehaviour
         }
         else
         {
-            _minimapCamera.ResetReplacementShader();
+            RemoveFlattenShader();
         }
 
-        _minimapCamera.allowMSAA = false;
         _minimapCamera.cullingMask |= 1 << OrthographicWaterLayer; 
 
         if (!_waterPlane)
@@ -297,10 +297,9 @@ public class MinimapCameraComponent : MonoBehaviour
         if (!_minimapCamera) return;
 
         _minimapCamera.orthographic = false;
-        _minimapCamera.allowMSAA = true;
         _minimapCamera.cullingMask = DefaultMask;
         
-        _minimapCamera.ResetReplacementShader();
+        RemoveFlattenShader();
 
         if (!_waterPlane) return;
         Destroy(_waterPlane);
