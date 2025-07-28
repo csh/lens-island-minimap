@@ -76,16 +76,9 @@ public class MinimapCameraComponent : MonoBehaviour
     }
 
     private Material _brightnessMaterial;
-    private TOD_Sky _todSky;
     
     private void InitializeBrightnessControl()
     {
-        _todSky = FindObjectOfType<TOD_Sky>();
-        if (!_todSky)
-        {
-            MinimapPlugin.Logger.LogWarning("Could not find Sky controller, minimap brightness will be static");
-        } 
-        
         var brightnessShader = Shader.Find("UI/Default");
         if (!brightnessShader)
         {
@@ -93,26 +86,36 @@ public class MinimapCameraComponent : MonoBehaviour
             return;
         }
         
-        _brightnessMaterial = new Material(brightnessShader);
-        _minimapImage.material = _brightnessMaterial;
-
-        if (!_todSky) return;
+        // TODO: Figure out if possible to smoothly transition brightness.
+        _brightnessMaterial = new Material(brightnessShader)
+        {
+            color = new Color(1.25f, 1.25f, 1.25f, 1.0f)
+        };
         
-        TOD_Time.OnHour += UpdateMinimapBrightness;
-        UpdateMinimapBrightness();
+        TOD_Time.OnSunrise += OnSunrise;
+        TOD_Time.OnSunset += OnSunset;
+        
+        var sky =  FindObjectOfType<TOD_Sky>();
+        if (sky && sky.IsNight)
+        {
+            OnSunset();
+        }
     }
 
-    private void UpdateMinimapBrightness()
+    private void OnSunrise()
     {
-        if (!_todSky || !_brightnessMaterial) return;
-        
-        var brightness = 1.0f;
-        if (_todSky && _todSky.IsNight)
+        if (_brightnessMaterial)
         {
-            brightness = 1.15f;
+            _minimapImage.material = null;
         }
-        
-        _brightnessMaterial.color = new Color(brightness, brightness, brightness, 1f);
+    }
+
+    private void OnSunset()
+    {
+        if (_brightnessMaterial)
+        {
+            _minimapImage.material = _brightnessMaterial;
+        }
     }
 
     private void CreateMinimapUI()
@@ -449,14 +452,10 @@ public class MinimapCameraComponent : MonoBehaviour
             }
         }
 
-        if (_todSky)
-        {
-            TOD_Time.OnHour -= UpdateMinimapBrightness;
-            _todSky = null;
-        }
-
         if (_brightnessMaterial)
         {
+            TOD_Time.OnSunrise -= OnSunrise;
+            TOD_Time.OnSunset -= OnSunset;
             Destroy(_brightnessMaterial);
         }
 
