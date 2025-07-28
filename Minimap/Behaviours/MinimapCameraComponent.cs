@@ -29,8 +29,8 @@ public class MinimapCameraComponent : MonoBehaviour
     private const string OrthographicShader = "Legacy Shaders/Diffuse";
     private const int OrthographicWaterLayer = 6;
     
-    private const float MinCameraHeight = 30f;
-    private const float MaxCameraHeight = 100f;
+    internal const float MinCameraHeight = 30f;
+    internal const float MaxCameraHeight = 100f;
     private const float ZoomStep = 10f;
 
     private static bool RotateWithPlayer => MinimapPlugin.Instance.RotateWithPlayer.Value;
@@ -60,6 +60,8 @@ public class MinimapCameraComponent : MonoBehaviour
             enabled = false;
             return;
         }
+
+        _cameraHeight = _cameraHeightTarget = MinimapPlugin.Instance.ZoomHeight.Value;
 
         CreateMinimapUI();
         CreateMinimapCamera();
@@ -244,6 +246,14 @@ public class MinimapCameraComponent : MonoBehaviour
         {
             _cameraHeightTarget = Mathf.Max(_cameraHeightTarget - ZoomStep, MinCameraHeight);
         }
+        
+        StartCoroutine(PushTargetHeightToConfig());
+    }
+
+    private IEnumerator PushTargetHeightToConfig()
+    {
+        yield return new WaitForEndOfFrame();
+        MinimapPlugin.Instance.ZoomHeight.Value = _cameraHeightTarget;
     }
 
     private void SmoothZoom()

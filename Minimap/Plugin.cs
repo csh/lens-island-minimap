@@ -25,6 +25,7 @@ public class MinimapPlugin : BaseUnityPlugin
     internal ConfigEntry<MinimapRenderStyle> RenderingStyle;
     internal ConfigEntry<bool> RotateWithPlayer;
     internal ConfigEntry<bool> ReplaceCompass;
+    internal ConfigEntry<float> ZoomHeight;
     internal ConfigEntry<bool> Flatten;
 
     private Harmony _harmony;
@@ -45,6 +46,11 @@ public class MinimapPlugin : BaseUnityPlugin
         RotateWithPlayer = Config.Bind("Minimap", "Rotation Enabled", true,
             "Should the minimap rotate with the player camera or remain fixed?");
 
+        ZoomHeight = Config.Bind("Minimap", "Camera Height", 60f,
+            new ConfigDescription("How many units above the player should the minimap camera be?",
+                new AcceptableValueRange<float>(MinimapCameraComponent.MinCameraHeight,
+                    MinimapCameraComponent.MaxCameraHeight)));
+        
         RenderingStyle = Config.Bind("Minimap", "Rendering Style", MinimapRenderStyle.Perspective);
 
         Flatten = Config.Bind("Orthographic", "Flatten", false,
