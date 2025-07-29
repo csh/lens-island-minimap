@@ -1,4 +1,6 @@
 ﻿using System;
+using System.IO;
+using System.Reflection;
 using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
@@ -12,11 +14,14 @@ namespace Minimap;
 [BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
 public class MinimapPlugin : BaseUnityPlugin
 {
-    // ReSharper disable once MemberCanBePrivate.Global
     internal static MinimapPlugin Instance { get; private set; }
+    internal static string OverlayRoot { get; private set; }
     internal new static ManualLogSource Logger;
 
+    private const string DefaultOverlayFilename = "Overlay.png";
+    
     internal ConfigEntry<MinimapRenderStyle> RenderingStyle;
+    internal ConfigEntry<string> OverlayFilename;
     internal ConfigEntry<bool> RotateWithPlayer;
     internal ConfigEntry<bool> ReplaceCompass;
     internal ConfigEntry<float> ZoomHeight;
@@ -33,12 +38,45 @@ public class MinimapPlugin : BaseUnityPlugin
         _harmony.PatchAll(typeof(MapPatches));
 
         Logger.LogInfo($"Plugin {MyPluginInfo.PLUGIN_NAME} is loaded!");
+        
+        var isScriptEngine = transform.name.Contains("ScriptEngine");
+        if (isScriptEngine)
+        {
+            OverlayRoot = Path.Combine(Paths.BepInExRootPath, "scripts", "Overlays");
+        }
+        else
+        {
+            OverlayRoot = Path.Combine(Assembly.GetExecutingAssembly().Location, "Overlays");
+        }
+
+        var defaultOverlayPath = Path.Combine(OverlayRoot, DefaultOverlayFilename);
+        if (!File.Exists(defaultOverlayPath))
+        {
+            Logger.LogInfo("Saving default overlay as Overlay.png");
+            var current = Assembly.GetExecutingAssembly();
+            try
+            {
+                using var stream = current.GetManifestResourceStream("Minimap.Overlay.png");
+                if (stream is null) throw new FileNotFoundException("Failed to find default overlay");
+                using var writer = File.OpenWrite(defaultOverlayPath);
+                stream.CopyTo(writer);
+            }
+            catch (Exception e)
+            {
+                Logger.LogError($"Failed to save default overlay to disk; {e}");
+            }
+        }
 
         ReplaceCompass = Config.Bind("Minimap", "Replace Compass", true,
             "Should the minimap hide the vanilla compass and shift status effects to the left to fill the empty space?");
 
         RotateWithPlayer = Config.Bind("Minimap", "Rotation Enabled", true,
             "Should the minimap rotate with the player camera or remain fixed?");
+
+        OverlayFilename = Config.Bind("Minimap", "Overlay", DefaultOverlayFilename, 
+            "Name of the overlay file to use.\n" + 
+            "Custom overlay files should be placed in the 'Overlays' subdirectory."
+        );
 
         ZoomHeight = Config.Bind("Minimap", "Camera Height", 60f,
             new ConfigDescription("How many units above the player should the minimap camera be?",
@@ -54,6 +92,7 @@ public class MinimapPlugin : BaseUnityPlugin
 
         RenderingStyle.SettingChanged += OnRenderingStyleChanged;
         Flatten.SettingChanged += OnFlattenChanged;
+        OverlayFilename.SettingChanged += OnOverlayChanged;
 
 #if DEBUG
         /*
@@ -65,6 +104,19 @@ public class MinimapPlugin : BaseUnityPlugin
             MapPatches.InjectMinimap(MapUIManager.Instance);
         }
 #endif
+    }
+
+    private void OnOverlayChanged(object sender, EventArgs e)
+    {
+        var minimap = MinimapCameraComponent.Instance;
+        if (!minimap)
+        {
+            Logger.LogWarning(
+                "Failed to find Minimap component; if you're not in game yet you can safely ignore this message.");
+            return;
+        }
+
+        minimap.ReplaceOverlay(OverlayFilename.Value);
     }
 
     private void OnFlattenChanged(object sender, EventArgs e)
@@ -112,6 +164,7 @@ public class MinimapPlugin : BaseUnityPlugin
     private void OnDestroy()
     {
         RenderingStyle.SettingChanged -= OnRenderingStyleChanged;
+        OverlayFilename.SettingChanged -= OnOverlayChanged;
         Flatten.SettingChanged -= OnFlattenChanged;
 
         _harmony?.UnpatchSelf();

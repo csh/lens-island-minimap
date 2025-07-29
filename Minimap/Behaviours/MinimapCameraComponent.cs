@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.IO;
 using Flow.StatusEffects;
 using UnityEngine;
@@ -42,11 +43,13 @@ public class MinimapCameraComponent : MonoBehaviour
 
     private RenderTexture _minimapRenderTexture;
     private GameObject _minimapContainer;
+    private Material _brightnessMaterial;
     private Transform _cameraTransform;
     private GameObject _overlayRoot;
     private RawImage _minimapImage;
-    private Camera _minimapCamera;
     private GameObject _waterPlane;
+    private Camera _minimapCamera;
+    private Image _overlayImage;
 
     private void Start()
     {
@@ -78,8 +81,6 @@ public class MinimapCameraComponent : MonoBehaviour
 
         Instance = this;
     }
-
-    private Material _brightnessMaterial;
 
     private void InitializeBrightnessControl()
     {
@@ -181,8 +182,9 @@ public class MinimapCameraComponent : MonoBehaviour
 
         var overlayImageObj = new GameObject("MinimapOverlayImage");
         overlayImageObj.transform.SetParent(_overlayRoot.transform, false);
-        var overlayImage = overlayImageObj.AddComponent<Image>();
-        overlayImage.sprite = LoadSpriteFromFile(@"H:\Minimap\Border\Border.png");
+        _overlayImage = overlayImageObj.AddComponent<Image>();
+        var overlayImagePath = Path.Combine(MinimapPlugin.OverlayRoot, Path.GetFileName(MinimapPlugin.Instance.OverlayFilename.Value));
+        _overlayImage.sprite = LoadSpriteFromFile(overlayImagePath);
 
         var overlayImageRect = overlayImageObj.GetComponent<RectTransform>();
         overlayImageRect.sizeDelta = OverlaySize;
@@ -190,6 +192,35 @@ public class MinimapCameraComponent : MonoBehaviour
         overlayImageRect.anchorMax = new Vector2(0.5f, 0.5f);
         overlayImageRect.pivot = new Vector2(0.5f, 0.5f);
         overlayImageRect.anchoredPosition = Vector2.zero;
+    }
+
+    public void ReplaceOverlay(string fileName)
+    {
+        if (!_overlayImage) return;
+
+        try
+        {
+            var replacementSprite = LoadSpriteFromFile(Path.Combine(MinimapPlugin.OverlayRoot, Path.GetFileName(fileName)));
+            if (replacementSprite)
+            {
+                var oldSprite = _overlayImage.sprite;
+                if (oldSprite)
+                {
+                    Destroy(oldSprite);
+                }
+                _overlayImage.sprite = replacementSprite;
+            }
+            else
+            {
+                MinimapPlugin.Logger.LogWarning($"Could not load replacement overlay, are you sure a file named {fileName} exists?");
+            }
+        }
+        catch (Exception e)
+        {
+            MinimapPlugin.Logger.LogError("Failed to load replacement overlay, falling back to default.");
+            MinimapPlugin.Logger.LogError(e);
+            ReplaceOverlay(MinimapPlugin.Instance.OverlayFilename.DefaultValue as string);
+        }
     }
 
     private IEnumerator ReplaceCompass()
@@ -463,6 +494,12 @@ public class MinimapCameraComponent : MonoBehaviour
                     x = 100f
                 };
             }
+        }
+
+        if (_overlayImage && _overlayImage.sprite)
+        {
+            Destroy(_overlayImage.sprite);
+            Destroy(_overlayImage);
         }
 
         if (_brightnessMaterial)

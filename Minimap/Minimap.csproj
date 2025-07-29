@@ -33,6 +33,10 @@
         <BepInExPluginGuid>com.smrkn.minimap</BepInExPluginGuid>
         <BepInExPluginName>Minimap</BepInExPluginName>
     </PropertyGroup>
+    
+    <ItemGroup>
+        <EmbeddedResource Include="$(MSBuildProjectDirectory)/../Overlays/Overlay.png"/>
+    </ItemGroup>
 
     <PropertyGroup>
         <GamePath Condition="'$(GamePath)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Len's Island</GamePath>
@@ -60,5 +64,13 @@
 
         <Copy SourceFiles="$(PluginOutputPath)" DestinationFolder="$(BepInExOutputDir)" SkipUnchangedFiles="true" />
         <Copy SourceFiles="$(PdbOutputPath)" DestinationFolder="$(BepInExOutputDir)" SkipUnchangedFiles="true" />
+
+        <ItemGroup>
+            <OverlayImageFiles Include="$(MSBuildProjectDirectory)\..\Overlays\*.png" />
+        </ItemGroup>
+
+        <MakeDir Directories="$(BepInExOutputDir)\Overlays" Condition="!Exists('$(BepInExOutputDir)\Overlays')" />
+        <Copy SourceFiles="@(OverlayImageFiles)" DestinationFolder="$(BepInExOutputDir)\Overlays" SkipUnchangedFiles="true" Condition="'@(OverlayImageFiles)' != ''" />
+        <Message Importance="high" Text="Copied @(OverlayImageFiles->Count()) overlay files to $(BepInExOutputDir)\Overlays" Condition="'@(OverlayImageFiles)' != ''" />
     </Target>
 </Project>
