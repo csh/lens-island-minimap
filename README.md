@@ -55,7 +55,7 @@ There are currently two different styles provided, aiming to cover different pre
 #### Orthographic
 
 Orthographic more commonly resembles what many people are familiar with when they think of minimaps.
-Very two dimensional with limited to no-depth.
+Very two dimensional with limited to no depth.
 
 > [!NOTE]
 > The game's water shader does not work with orthographic mode out of the box.
