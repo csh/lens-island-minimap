@@ -484,5 +484,8 @@ $RECYCLE.BIN/
 *.swp
 
 # Krita temp files
-Border/*.kra~
-Border/*.png~
+Overlays/*.kra~
+Overlays/*.png~
+
+# Thunderstore CLI
+build
