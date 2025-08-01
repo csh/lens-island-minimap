@@ -46,16 +46,22 @@ public class MinimapPlugin : BaseUnityPlugin
         }
         else
         {
-            OverlayRoot = Path.Combine(Assembly.GetExecutingAssembly().Location, "Overlays");
+            OverlayRoot = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? throw new Exception("Failed to query assembly location."), "Overlays");
+        }
+        
+        if (!Directory.Exists(OverlayRoot))
+        {
+            Logger.LogInfo("Creating Overlays directory");
+            Directory.CreateDirectory(OverlayRoot);
         }
 
         var defaultOverlayPath = Path.Combine(OverlayRoot, DefaultOverlayFilename);
         if (!File.Exists(defaultOverlayPath))
         {
-            Logger.LogInfo("Saving default overlay as Overlay.png");
             var current = Assembly.GetExecutingAssembly();
             try
             {
+                Logger.LogInfo("Saving default overlay as Overlays/Overlay.png");
                 using var stream = current.GetManifestResourceStream("Minimap.Overlay.png");
                 if (stream is null) throw new FileNotFoundException("Failed to find default overlay");
                 using var writer = File.OpenWrite(defaultOverlayPath);
